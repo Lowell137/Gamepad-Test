@@ -1,0 +1,18 @@
+{
+  "colors": {
+    "bg": "#1e1e20",
+    "surface": "#26262a",
+    "surface_alt": "#303036",
+    "border": "#3f3f46",
+    "text": "#f6f5f4",
+    "muted": "#b8b8bf",
+    "accent": "#62a0ea",
+    "accent_alt": "#4470a3",
+    "ok": "#57e389",
+    "warn": "#f6d32d",
+    "danger": "#ff7b7b",
+    "canvas_bg": "#111318",
+    "canvas_grid": "#1e242d",
+    "bar": "#75c0ff"
+  }
+}

@@ -1,0 +1,19 @@
+Icons in this folder are from Twemoji.
+
+Source: https://github.com/twitter/twemoji
+License: CC-BY 4.0
+Copyright: Copyright 2020 Twitter, Inc and other contributors
+
+Files used:
+- gamepad.png
+- refresh.png
+- play.png
+- stop.png
+- bolt.png
+- wave.png
+- heart.png
+- random.png
+- alt.png
+- speed.png
+- sparkles.png
+- safety.png

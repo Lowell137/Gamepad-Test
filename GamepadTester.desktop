@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Gamepad Tester
+GenericName=Gamepad Vibration Tool
+Comment=Gamepad vibration test tool
+Exec=/home/ryuma/Belgeler/gamepad_tester/start_gamepad_tester.sh
+Icon=/home/ryuma/Belgeler/gamepad_tester/icon.png
+Path=/home/ryuma/Belgeler/gamepad_tester
+Terminal=false
+Categories=Utility;Game;
+Keywords=gamepad;controller;joystick;vibration;tester;
+StartupNotify=true
