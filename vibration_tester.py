@@ -114,10 +114,18 @@ class GamepadVibrationTester(ctk.CTk):
         self.visual_phase = 0.0
         self.ui_anim_phase = 0.0
 
-        self.icon_svg_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icons", "svg")
-        self.icon_png_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icons", "png")
-        self.theme_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "theme_colors.json")
+        self.icon_svg_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "assets", "icons", "svg"
+        )
+        self.icon_png_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "assets", "icons", "png"
+        )
+        self.theme_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "theme_colors.json"
+        )
         self.icons = self.load_icons(size=16)
+        self.custom_binding = "F9"
+        self.bindings = []
         self.settings_window = None
         self.settings_hex_entry = None
         self.settings_preview = None
@@ -138,6 +146,7 @@ class GamepadVibrationTester(ctk.CTk):
         self.bind("<space>", self.on_space)
         self.bind("<Escape>", self.on_stop_shortcut)
         self.bind("<r>", self.on_refresh_shortcut)
+        self.bind(f"<Key-{self.custom_binding}>", self.on_space)
 
     def load_icons(self, size=16):
         icons = {}
@@ -163,7 +172,9 @@ class GamepadVibrationTester(ctk.CTk):
 
             try:
                 svg_mtime = os.path.getmtime(svg_path)
-                png_mtime = os.path.getmtime(png_path) if os.path.exists(png_path) else -1
+                png_mtime = (
+                    os.path.getmtime(png_path) if os.path.exists(png_path) else -1
+                )
                 if svg_mtime > png_mtime:
                     subprocess.run(
                         [
@@ -182,7 +193,9 @@ class GamepadVibrationTester(ctk.CTk):
                     )
 
                 image = Image.open(png_path)
-                icons[key] = ctk.CTkImage(light_image=image, dark_image=image, size=(size, size))
+                icons[key] = ctk.CTkImage(
+                    light_image=image, dark_image=image, size=(size, size)
+                )
             except Exception:
                 continue
 
@@ -204,9 +217,12 @@ class GamepadVibrationTester(ctk.CTk):
         device_row = ctk.CTkFrame(self.panel, fg_color="transparent")
         device_row.pack(fill="x", padx=12, pady=(10, 6))
 
-        ctk.CTkLabel(device_row, text="Device", font=("Cantarell", 12, "bold"), text_color=COLORS["text"]).pack(
-            side="left", padx=(0, 8)
-        )
+        ctk.CTkLabel(
+            device_row,
+            text="Device",
+            font=("Cantarell", 12, "bold"),
+            text_color=COLORS["text"],
+        ).pack(side="left", padx=(0, 8))
 
         self.device_var = ctk.StringVar(value="No Device")
         self.option_device = ctk.CTkOptionMenu(
@@ -256,9 +272,12 @@ class GamepadVibrationTester(ctk.CTk):
         mode_row = ctk.CTkFrame(self.panel, fg_color="transparent")
         mode_row.pack(fill="x", padx=12, pady=6)
 
-        ctk.CTkLabel(mode_row, text="Mode", font=("Cantarell", 12, "bold"), text_color=COLORS["text"]).pack(
-            side="left", padx=(0, 8)
-        )
+        ctk.CTkLabel(
+            mode_row,
+            text="Mode",
+            font=("Cantarell", 12, "bold"),
+            text_color=COLORS["text"],
+        ).pack(side="left", padx=(0, 8))
 
         self.mode_var = ctk.StringVar(value="Continuous")
         self.option_mode = ctk.CTkOptionMenu(
@@ -287,12 +306,14 @@ class GamepadVibrationTester(ctk.CTk):
 
         slider_row = ctk.CTkFrame(self.panel, fg_color="transparent")
         slider_row.pack(fill="x", padx=12, pady=(6, 8))
-        slider_row.grid_columnconfigure((0, 1, 2), weight=1)
+        slider_row.grid_columnconfigure((0, 1), weight=1)
 
         left_col = ctk.CTkFrame(slider_row, fg_color="transparent")
         left_col.grid(row=0, column=0, sticky="ew", padx=(0, 6))
 
-        self.label_left = ctk.CTkLabel(left_col, text="Left 70%", font=("Cantarell", 12), text_color=COLORS["text"])
+        self.label_left = ctk.CTkLabel(
+            left_col, text="Left 70%", font=("Cantarell", 12), text_color=COLORS["text"]
+        )
         self.label_left.pack(anchor="w")
         self.slider_left = ctk.CTkSlider(
             left_col,
@@ -304,13 +325,18 @@ class GamepadVibrationTester(ctk.CTk):
             button_hover_color=COLORS["accent_alt"],
             fg_color=COLORS["surface_alt"],
         )
-        self.slider_left.set(70)
+        self.slider_left.set(100)
         self.slider_left.pack(fill="x", pady=(2, 0))
 
         right_col = ctk.CTkFrame(slider_row, fg_color="transparent")
-        right_col.grid(row=0, column=1, sticky="ew", padx=6)
+        right_col.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-        self.label_right = ctk.CTkLabel(right_col, text="Right 70%", font=("Cantarell", 12), text_color=COLORS["text"])
+        self.label_right = ctk.CTkLabel(
+            right_col,
+            text="Right 100%",
+            font=("Cantarell", 12),
+            text_color=COLORS["text"],
+        )
         self.label_right.pack(anchor="w")
         self.slider_right = ctk.CTkSlider(
             right_col,
@@ -322,35 +348,17 @@ class GamepadVibrationTester(ctk.CTk):
             button_hover_color=COLORS["accent_alt"],
             fg_color=COLORS["surface_alt"],
         )
-        self.slider_right.set(70)
+        self.slider_right.set(100)
         self.slider_right.pack(fill="x", pady=(2, 0))
-
-        speed_col = ctk.CTkFrame(slider_row, fg_color="transparent")
-        speed_col.grid(row=0, column=2, sticky="ew", padx=(6, 0))
-
-        self.label_speed = ctk.CTkLabel(speed_col, text="Speed 5", font=("Cantarell", 12), text_color=COLORS["text"])
-        self.label_speed.pack(anchor="w")
-        self.slider_speed = ctk.CTkSlider(
-            speed_col,
-            from_=1,
-            to=10,
-            command=self.update_speed,
-            progress_color=COLORS["accent"],
-            button_color=COLORS["accent_alt"],
-            button_hover_color=COLORS["accent_alt"],
-            fg_color=COLORS["surface_alt"],
-        )
-        self.slider_speed.set(5)
-        self.slider_speed.pack(fill="x", pady=(2, 0))
 
         button_row = ctk.CTkFrame(self.panel, fg_color="transparent")
         button_row.pack(fill="x", padx=12, pady=(0, 12))
-        button_row.grid_columnconfigure((0, 1, 2), weight=1)
+        button_row.grid_columnconfigure((0, 1), weight=1)
 
-        self.btn_start = ctk.CTkButton(
+        self.btn_toggle = ctk.CTkButton(
             button_row,
             text="Start",
-            command=self.start_mode,
+            command=self.toggle_mode,
             fg_color=COLORS["accent"],
             hover_color=COLORS["accent_alt"],
             text_color="#ffffff",
@@ -359,7 +367,7 @@ class GamepadVibrationTester(ctk.CTk):
             image=self.icons.get("play"),
             compound="left",
         )
-        self.btn_start.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+        self.btn_toggle.grid(row=0, column=0, sticky="ew", padx=(0, 4))
 
         self.btn_oneshot = ctk.CTkButton(
             button_row,
@@ -373,21 +381,7 @@ class GamepadVibrationTester(ctk.CTk):
             image=self.icons.get("flash"),
             compound="left",
         )
-        self.btn_oneshot.grid(row=0, column=1, sticky="ew", padx=4)
-
-        self.btn_stop = ctk.CTkButton(
-            button_row,
-            text="Stop",
-            command=self.stop_mode,
-            fg_color=COLORS["accent"],
-            hover_color=COLORS["accent_alt"],
-            text_color="#ffffff",
-            font=("Cantarell", 12, "bold"),
-            height=36,
-            image=self.icons.get("stop"),
-            compound="left",
-        )
-        self.btn_stop.grid(row=0, column=2, sticky="ew", padx=(4, 0))
+        self.btn_oneshot.grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
         self.visual_card = ctk.CTkFrame(
             root,
@@ -442,7 +436,9 @@ class GamepadVibrationTester(ctk.CTk):
             "bad": COLORS["danger"],
             "info": COLORS["accent"],
         }
-        self.label_status.configure(text=text, text_color=tone_map.get(tone, COLORS["muted"]))
+        self.label_status.configure(
+            text=text, text_color=tone_map.get(tone, COLORS["muted"])
+        )
 
     def load_theme_from_disk(self):
         if not os.path.exists(self.theme_path):
@@ -472,8 +468,12 @@ class GamepadVibrationTester(ctk.CTk):
     def refresh_theme_widgets(self):
         self.configure(fg_color=COLORS["bg"])
         self.panel.configure(fg_color=COLORS["surface"], border_color=COLORS["border"])
-        self.visual_card.configure(fg_color=COLORS["surface"], border_color=COLORS["border"])
-        self.status_bar.configure(fg_color=COLORS["surface"], border_color=COLORS["border"])
+        self.visual_card.configure(
+            fg_color=COLORS["surface"], border_color=COLORS["border"]
+        )
+        self.status_bar.configure(
+            fg_color=COLORS["surface"], border_color=COLORS["border"]
+        )
         self.canvas.configure(bg=COLORS["canvas_bg"])
 
         self.option_device.configure(
@@ -505,18 +505,21 @@ class GamepadVibrationTester(ctk.CTk):
             button_hover_color=COLORS["accent_alt"],
             fg_color=COLORS["surface_alt"],
         )
-        self.slider_speed.configure(
-            progress_color=COLORS["accent"],
-            button_color=COLORS["accent_alt"],
-            button_hover_color=COLORS["accent_alt"],
-            fg_color=COLORS["surface_alt"],
-        )
 
-        self.btn_settings.configure(fg_color=COLORS["surface_alt"], hover_color=COLORS["border"], text_color=COLORS["text"])
-        self.btn_refresh.configure(fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"])
-        self.btn_start.configure(fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"])
-        self.btn_oneshot.configure(fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"])
-        self.btn_stop.configure(fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"])
+        self.btn_settings.configure(
+            fg_color=COLORS["surface_alt"],
+            hover_color=COLORS["border"],
+            text_color=COLORS["text"],
+        )
+        self.btn_refresh.configure(
+            fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"]
+        )
+        self.btn_toggle.configure(
+            fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"]
+        )
+        self.btn_oneshot.configure(
+            fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"]
+        )
 
         if self.active_mode:
             self.label_state.configure(text_color=COLORS["accent"])
@@ -526,7 +529,9 @@ class GamepadVibrationTester(ctk.CTk):
         if self.settings_window and self.settings_window.winfo_exists():
             self.settings_window.configure(fg_color=COLORS["surface"])
         if self.settings_preview and self.settings_preview.winfo_exists():
-            self.settings_preview.configure(fg_color=COLORS["accent"], border_color=COLORS["border"])
+            self.settings_preview.configure(
+                fg_color=COLORS["accent"], border_color=COLORS["border"]
+            )
         if self.settings_preset_menu and self.settings_preset_menu.winfo_exists():
             self.settings_preset_menu.configure(
                 fg_color=COLORS["surface_alt"],
@@ -537,11 +542,19 @@ class GamepadVibrationTester(ctk.CTk):
                 text_color=COLORS["text"],
             )
         if self.settings_apply_btn and self.settings_apply_btn.winfo_exists():
-            self.settings_apply_btn.configure(fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"])
+            self.settings_apply_btn.configure(
+                fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"]
+            )
         if self.settings_pick_btn and self.settings_pick_btn.winfo_exists():
-            self.settings_pick_btn.configure(fg_color=COLORS["surface_alt"], hover_color=COLORS["border"], text_color=COLORS["text"])
+            self.settings_pick_btn.configure(
+                fg_color=COLORS["surface_alt"],
+                hover_color=COLORS["border"],
+                text_color=COLORS["text"],
+            )
         if self.settings_custom_btn and self.settings_custom_btn.winfo_exists():
-            self.settings_custom_btn.configure(fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"])
+            self.settings_custom_btn.configure(
+                fg_color=COLORS["accent"], hover_color=COLORS["accent_alt"]
+            )
 
     def open_settings(self):
         if self.settings_window and self.settings_window.winfo_exists():
@@ -650,6 +663,44 @@ class GamepadVibrationTester(ctk.CTk):
         )
         self.settings_preview.pack(fill="x")
 
+        ctk.CTkLabel(
+            container,
+            text="Toggle Shortcut",
+            font=("Cantarell", 14, "bold"),
+            text_color=COLORS["text"],
+        ).pack(anchor="w", pady=(20, 6))
+
+        shortcut_row = ctk.CTkFrame(container, fg_color="transparent")
+        shortcut_row.pack(fill="x")
+
+        self.shortcut_var = ctk.StringVar(value="F9")
+        self.shortcut_entry = ctk.CTkEntry(
+            shortcut_row,
+            textvariable=self.shortcut_var,
+            font=("Cantarell", 12),
+            text_color=COLORS["text"],
+            fg_color=COLORS["surface_alt"],
+            border_color=COLORS["border"],
+            width=100,
+        )
+        self.shortcut_entry.pack(side="left")
+
+        ctk.CTkLabel(
+            shortcut_row,
+            text="Press key to set",
+            font=("Cantarell", 11),
+            text_color=COLORS["muted"],
+        ).pack(side="left", padx=10)
+
+        self.shortcut_entry.bind("<Key>", self.on_shortcut_key)
+
+        ctk.CTkLabel(
+            container,
+            text="Use F9 or another key to toggle vibration",
+            font=("Cantarell", 11),
+            text_color=COLORS["muted"],
+        ).pack(anchor="w", pady=(8, 0))
+
     def close_settings(self):
         if self.settings_window and self.settings_window.winfo_exists():
             self.settings_window.destroy()
@@ -660,15 +711,45 @@ class GamepadVibrationTester(ctk.CTk):
         self.settings_apply_btn = None
         self.settings_pick_btn = None
         self.settings_custom_btn = None
+        self.shortcut_entry = None
+
+    def on_shortcut_key(self, event):
+        key = event.keysym
+        if key not in (
+            "Shift_L",
+            "Shift_R",
+            "Control_L",
+            "Control_R",
+            "Alt_L",
+            "Alt_R",
+        ):
+            self.shortcut_var.set(key)
+            self.update_shortcut_binding(key)
+        return "break"
+
+    def update_shortcut_binding(self, key):
+        if hasattr(self, "custom_binding") and self.custom_binding:
+            try:
+                self.unbind(f"<Key-{self.custom_binding}>")
+            except Exception:
+                pass
+        self.custom_binding = key
+        self.bind(f"<Key-{key}>", self.on_space)
 
     def apply_preset_color(self):
-        name = self.settings_preset_var.get() if hasattr(self, "settings_preset_var") else None
+        name = (
+            self.settings_preset_var.get()
+            if hasattr(self, "settings_preset_var")
+            else None
+        )
         color_value = PRESET_ACCENTS.get(name)
         if color_value:
             self.apply_theme_color(color_value)
 
     def pick_custom_color(self):
-        picked = colorchooser.askcolor(color=COLORS["accent"], parent=self.settings_window)
+        picked = colorchooser.askcolor(
+            color=COLORS["accent"], parent=self.settings_window
+        )
         if picked and picked[1]:
             self.apply_theme_color(picked[1])
             if self.settings_hex_entry and self.settings_hex_entry.winfo_exists():
@@ -710,14 +791,14 @@ class GamepadVibrationTester(ctk.CTk):
     def update_right(self, value):
         self.label_right.configure(text=f"Right {int(value)}%")
 
-    def update_speed(self, value):
-        self.label_speed.configure(text=f"Speed {int(value)}")
+    def get_speed(self):
+        return 5
 
     def get_levels(self):
         return self.slider_left.get() / 100.0, self.slider_right.get() / 100.0
 
     def get_speed(self):
-        return self.slider_speed.get()
+        return 5
 
     def manual_refresh(self):
         pygame.event.pump()
@@ -778,6 +859,12 @@ class GamepadVibrationTester(ctk.CTk):
         except Exception:
             pass
 
+    def toggle_mode(self):
+        if self.active_mode:
+            self.stop_mode()
+        else:
+            self.start_mode()
+
     def start_mode(self):
         if not self.joystick:
             self.set_status("Select a device first", tone="warn")
@@ -788,8 +875,10 @@ class GamepadVibrationTester(ctk.CTk):
         self.mode_phase = 0.0
         self.mode_toggle = False
 
-        self.btn_start.configure(text="Running")
-        self.label_state.configure(text=f"Mode: {self.active_mode}", text_color=COLORS["accent"])
+        self.btn_toggle.configure(text="Stop", image=self.icons.get("stop"))
+        self.label_state.configure(
+            text=f"Mode: {self.active_mode}", text_color=COLORS["accent"]
+        )
         self.set_status(f"{self.active_mode} started", tone="info")
 
     def stop_mode(self):
@@ -802,7 +891,7 @@ class GamepadVibrationTester(ctk.CTk):
         self.current_right = 0.0
         self.safe_stop_rumble()
 
-        self.btn_start.configure(text="Start")
+        self.btn_toggle.configure(text="Start", image=self.icons.get("play"))
         self.label_state.configure(text="Idle", text_color=COLORS["muted"])
 
     def one_shot(self):
@@ -906,11 +995,15 @@ class GamepadVibrationTester(ctk.CTk):
         height = max(40, self.canvas.winfo_height())
 
         self.canvas.delete("all")
-        self.canvas.create_rectangle(0, 0, width, height, fill=COLORS["canvas_bg"], outline="")
+        self.canvas.create_rectangle(
+            0, 0, width, height, fill=COLORS["canvas_bg"], outline=""
+        )
 
         step = 28
         for x in range(0, width + 1, step):
-            self.canvas.create_line(x, 0, x, height, fill=COLORS["canvas_grid"], width=1)
+            self.canvas.create_line(
+                x, 0, x, height, fill=COLORS["canvas_grid"], width=1
+            )
         for y in range(0, height + 1, step):
             self.canvas.create_line(0, y, width, y, fill=COLORS["canvas_grid"], width=1)
 
@@ -926,7 +1019,9 @@ class GamepadVibrationTester(ctk.CTk):
             level = self.current_left if i < self.bar_count // 2 else self.current_right
             wobble = (math.sin(self.visual_phase + i * 0.45) + 1.0) / 2.0
             noise = random.uniform(0.0, 0.08)
-            target = clamp(level * 0.85 + level * wobble * 0.35 + noise * level, 0.0, 1.0)
+            target = clamp(
+                level * 0.85 + level * wobble * 0.35 + noise * level, 0.0, 1.0
+            )
 
             self.bar_values[i] = self.bar_values[i] * 0.72 + target * 0.28
             h = 6 + self.bar_values[i] * max_h
