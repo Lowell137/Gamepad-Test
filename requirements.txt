@@ -1,3 +1,5 @@
 pygame
+PyQt6
+qfluentwidgets
 customtkinter
 pillow

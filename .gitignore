@@ -1,0 +1,14 @@
+# Derleme çıktıları (GitHub'da tutulmaz; build_windows.bat ile üretilir)
+build/
+dist/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Yerel/geçici dosyalar
+*.log
+*.spec.bak
+.venv/
+venv/
+env/

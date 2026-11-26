@@ -9,6 +9,12 @@ import time
 import tkinter as tk
 from tkinter import colorchooser
 
+# SDL suspends joystick handling when it thinks the app is in the background.
+# It reads this hint during SDL_Init (pygame.init), so it must be set here,
+# before pygame is imported/initialized. Without it, rumble disappears as soon
+# as the window loses focus or is minimized.
+os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
+
 import customtkinter as ctk
 import pygame
 from PIL import Image
@@ -845,7 +851,8 @@ class GamepadVibrationTester(ctk.CTk):
 
         left = clamp(left, 0.0, 1.0)
         right = clamp(right, 0.0, 1.0)
-        duration_ms = int(clamp(duration_ms, 1, 1500))
+        # 0 is meaningful in SDL: rumble until explicitly stopped.
+        duration_ms = int(clamp(duration_ms, 0, 1500))
 
         self.joystick.rumble(left, right, duration_ms)
         self.current_left = left
@@ -913,7 +920,10 @@ class GamepadVibrationTester(ctk.CTk):
         if self.active_mode == "Continuous":
             interval = clamp(0.24 - speed * 0.014, 0.06, 0.24)
             if now - self.mode_last_tick >= interval:
-                self.send_rumble(left_base, right_base, int(interval * 1000) + 90)
+                # Infinite duration keeps the motors running even if a timer
+                # tick is delayed (minimized / not focused). Re-issuing it is
+                # harmless and also acts as a keep-alive if SDL clears effects.
+                self.send_rumble(left_base, right_base, 0)
                 self.mode_last_tick = now
 
         elif self.active_mode == "Pulse":
