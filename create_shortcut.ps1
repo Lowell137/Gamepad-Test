@@ -1,8 +1,26 @@
+$ErrorActionPreference = 'Stop'
+
+$root = $PSScriptRoot
+$exe = Join-Path $root 'dist\GamepadTest\GamepadTest.exe'
+$icon = Join-Path $root 'icon.ico'
+
+if (-not (Test-Path $exe)) {
+    throw "Executable not found: $exe  (once build_windows.bat / build_exe.spec calistir)"
+}
+
 $WshShell = New-Object -ComObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("$([System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), 'GamepadTest.lnk'))")
-$Shortcut.TargetPath = [System.IO.Path]::Combine($PSScriptRoot, 'dist', 'GamepadTest', 'GamepadTest.exe')
-$Shortcut.WorkingDirectory = [System.IO.Path]::Combine($PSScriptRoot, 'dist', 'GamepadTest')
-$Shortcut.IconLocation = [System.IO.Path]::Combine($PSScriptRoot, 'icon.png')
-$Shortcut.Description = 'Gamepad Haptics Tester'
-$Shortcut.Save()
-Write-Host "Shortcut created on Desktop: GamepadTest.lnk"
+
+$targets = @(
+    (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Gamepad Haptics.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Programs')) 'Gamepad Haptics.lnk')
+)
+
+foreach ($path in $targets) {
+    $shortcut = $WshShell.CreateShortcut($path)
+    $shortcut.TargetPath = $exe
+    $shortcut.WorkingDirectory = Split-Path $exe -Parent
+    $shortcut.IconLocation = if (Test-Path $icon) { "$icon,0" } else { "$exe,0" }
+    $shortcut.Description = 'Gamepad Haptics Tester'
+    $shortcut.Save()
+    Write-Host "Kisayol olusturuldu: $path"
+}
