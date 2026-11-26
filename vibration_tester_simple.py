@@ -4,15 +4,28 @@ PyQt6 + qFluentWidgets kullanır. Titreşim, uygulama arka planda veya
 minimize edilmiş olsa da devam eder.
 """
 
+import ctypes
+import json
 import math
 import os
 import random
+import subprocess
+import sys
+import tempfile
 import time
+from ctypes import wintypes
 
-# SDL, uygulamayı arka planda sanarsa joystick işlemlerini askıya alır.
-# Bu ayar SDL_Init (pygame.init) sırasında okunur; pygame import edilmeden
-# önce yapılmalı. Aksi halde pencere odağı kaybettiğinde titreşim kesilir.
+# Bu ayarlar SDL_Init (pygame.init) sırasında okunur; pygame import
+# edilmeden önce yapılmalı.
 os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
+
+# Windows'ta SDL, XInput kolunu RAWINPUT sürücüsüyle açıp titreşimi
+# Windows.Gaming.Input (WGI) üzerinden gönderiyor. WGI titreşimi arka planda
+# kapatıyor. RAWINPUT'u devre dışı bırakınca SDL saf XInput sürücüsünü
+# kullanıyor; XInputSetState arka planda da çalışıyor (SDL kaynak kodu:
+# "Prefer XInput over WGI because it allows rumble in the background").
+os.environ["SDL_JOYSTICK_RAWINPUT"] = "0"
+os.environ["SDL_JOYSTICK_WGI"] = "0"
 
 import pygame
 from PyQt6.QtCore import Qt, QTimer, QRect, QEvent
@@ -43,8 +56,11 @@ from qfluentwidgets import (
     Theme,
 )
 
-pygame.init()
-pygame.joystick.init()
+HELPER_FLAG = "--rumble-helper"
+
+if HELPER_FLAG not in sys.argv:
+    pygame.init()
+    pygame.joystick.init()
 
 ACCENT = "#62a0ea"
 BAR_COLOR = "#7eb6ff"
@@ -77,6 +93,70 @@ def to_qcolor(hex_color):
         int(hex_color[3:5], 16),
         int(hex_color[5:7], 16),
     )
+
+
+class XINPUT_VIBRATION(ctypes.Structure):
+    _fields_ = [
+        ("wLeftMotorSpeed", wintypes.WORD),
+        ("wRightMotorSpeed", wintypes.WORD),
+    ]
+
+
+def run_rumble_helper(state_path):
+    """Penceresiz süreç: XInputSetState'i sürekli yeniden gönderir.
+
+    Windows 11, odağı olmayan GUI sürecinin titreşimini sıfırlıyor. Penceresi
+    olmayan bir süreçten gönderilen XInputSetState ise arka planda da çalışıyor.
+    Arayüz modu hesaplayıp hedef seviyeleri state_path dosyasına yazar; bu
+    süreç dosyayı 15 ms'de bir okuyup motorlara uygular.
+    """
+    xinput = ctypes.WinDLL("xinput1_4.dll")
+    xinput.XInputSetState.argtypes = [
+        wintypes.DWORD,
+        ctypes.POINTER(XINPUT_VIBRATION),
+    ]
+    xinput.XInputSetState.restype = wintypes.DWORD
+
+    last_state = None
+    last_update = time.time()
+
+    while True:
+        try:
+            with open(state_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            last_update = time.time()
+        except Exception:
+            data = last_state
+
+        if data is None:
+            time.sleep(0.015)
+            continue
+
+        if data.get("stop"):
+            break
+
+        # Arayüz kapanırsa yardımcı süreç de kendiliğinden çıkar.
+        if time.time() - last_update > 2.0:
+            break
+
+        slot = int(data.get("slot", 0)) & 0x3
+        left = clamp(float(data.get("left", 0.0)), 0.0, 1.0)
+        right = clamp(float(data.get("right", 0.0)), 0.0, 1.0)
+        vibration = XINPUT_VIBRATION(
+            int(left * 65535),
+            int(right * 65535),
+        )
+        xinput.XInputSetState(slot, ctypes.byref(vibration))
+        last_state = data
+        time.sleep(0.015)
+
+    silent = XINPUT_VIBRATION(0, 0)
+    for slot in range(4):
+        xinput.XInputSetState(slot, ctypes.byref(silent))
+    try:
+        os.remove(state_path)
+    except OSError:
+        pass
 
 
 class VisualizerWidget(QWidget):
@@ -157,6 +237,11 @@ class TesterInterface(QWidget):
         self.current_left = 0.0
         self.current_right = 0.0
         self.last_decay = time.time()
+
+        self.state_path = os.path.join(
+            tempfile.gettempdir(), f"gamepad_haptics_{os.getpid()}.json"
+        )
+        self.helper_proc = None
 
         self._build_ui()
         self._setup_timers()
@@ -359,24 +444,73 @@ class TesterInterface(QWidget):
         self.refresh_devices()
 
     # ---------- titreşim ----------
-    def send_rumble(self, left, right, duration_ms):
-        if not self.joystick:
+    def _write_state(self, left, right, stop=False):
+        """Hedef motor seviyelerini yardımcı sürecin okuduğu dosyaya yazar."""
+        data = {
+            "slot": int(self.joystick.get_id()) if self.joystick else 0,
+            "left": clamp(left, 0.0, 1.0),
+            "right": clamp(right, 0.0, 1.0),
+            "stop": stop,
+        }
+        tmp = self.state_path + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            os.replace(tmp, self.state_path)
+        except OSError:
+            pass
+
+    def _start_helper(self):
+        if self.helper_proc and self.helper_proc.poll() is None:
             return
+        self._write_state(0.0, 0.0)
+        if getattr(sys, "frozen", False):
+            cmd = [sys.executable, HELPER_FLAG, self.state_path]
+        else:
+            pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+            if not os.path.exists(pythonw):
+                pythonw = sys.executable
+            cmd = [pythonw, os.path.abspath(__file__), HELPER_FLAG, self.state_path]
+
+        flags = 0
+        flags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        flags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+        self.helper_proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=flags,
+            close_fds=True,
+        )
+
+    def _stop_helper(self):
+        self._write_state(0.0, 0.0, stop=True)
+        proc = self.helper_proc
+        if proc is not None:
+            try:
+                proc.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                proc.terminate()
+            self.helper_proc = None
+        try:
+            os.remove(self.state_path)
+        except OSError:
+            pass
+
+    def _stop_helper_if_idle(self):
+        if not self.active_mode:
+            self._stop_helper()
+
+    def send_rumble(self, left, right, duration_ms):
         left = clamp(left, 0.0, 1.0)
         right = clamp(right, 0.0, 1.0)
-        # 0, SDL'de "durdurulana kadar titret" anlamına gelir.
-        duration_ms = int(clamp(duration_ms, 0, 1500))
-        self.joystick.rumble(left, right, duration_ms)
+        self._write_state(left, right)
         self.current_left = left
         self.current_right = right
 
     def safe_stop_rumble(self):
-        if not self.joystick:
-            return
-        try:
-            self.joystick.stop_rumble()
-        except Exception:
-            pass
+        self._write_state(0.0, 0.0)
 
     def toggle_mode(self):
         self.stop_mode() if self.active_mode else self.start_mode()
@@ -389,6 +523,7 @@ class TesterInterface(QWidget):
         self.mode_last_tick = 0.0
         self.mode_phase = 0.0
         self.mode_toggle = False
+        self._start_helper()
         self.btn_toggle.setText("Durdur")
         self.btn_toggle.setIcon(FluentIcon.PAUSE_BOLD)
         self.label_state.setText(f"Mod: {self.active_mode}")
@@ -402,6 +537,7 @@ class TesterInterface(QWidget):
         self.current_left = 0.0
         self.current_right = 0.0
         self.safe_stop_rumble()
+        self._stop_helper()
         self.btn_toggle.setText("Başlat")
         self.btn_toggle.setIcon(FluentIcon.PLAY_SOLID)
         self.label_state.setText("Boşta")
@@ -412,7 +548,9 @@ class TesterInterface(QWidget):
             return
         left, right = self.get_levels()
         try:
+            self._start_helper()
             self.send_rumble(left, right, 1000)
+            QTimer.singleShot(1000, self._stop_helper_if_idle)
             self.set_status("1 saniyelik test gönderildi")
         except Exception as exc:
             self.set_status(f"Titreşim hatası: {exc}", tone="bad")
@@ -545,9 +683,13 @@ class GamepadHapticsWindow(FluentWindow):
 
 
 if __name__ == "__main__":
-    import sys
-
-    app = QApplication(sys.argv)
-    window = GamepadHapticsWindow()
-    window.show()
-    sys.exit(app.exec())
+    if HELPER_FLAG in sys.argv:
+        index = sys.argv.index(HELPER_FLAG)
+        state_path = sys.argv[index + 1] if len(sys.argv) > index + 1 else ""
+        if state_path:
+            run_rumble_helper(state_path)
+    else:
+        app = QApplication(sys.argv)
+        window = GamepadHapticsWindow()
+        window.show()
+        sys.exit(app.exec())

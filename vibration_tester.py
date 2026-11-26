@@ -14,6 +14,9 @@ from tkinter import colorchooser
 # before pygame is imported/initialized. Without it, rumble disappears as soon
 # as the window loses focus or is minimized.
 os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
+# WGI yerine saf XInput rumble yolu (arka planda çalışır).
+os.environ["SDL_JOYSTICK_RAWINPUT"] = "0"
+os.environ["SDL_JOYSTICK_WGI"] = "0"
 
 import customtkinter as ctk
 import pygame
